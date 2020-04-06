@@ -1,0 +1,14 @@
+# mac os
+.DS_Store
+
+# PyCharm
+.idea/**
+eeg_preprocessing/.idea/**
+
+# cache
+__pycache__/
+*.pyc
+
+# doit
+.doit*
+system_check.txt

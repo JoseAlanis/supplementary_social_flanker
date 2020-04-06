@@ -1,0 +1,9 @@
+numpy
+scipy
+matplotlib
+pandas
+sklearn
+doit>=0.30
+mne>=0.19
+mne-bids
+python-picard
