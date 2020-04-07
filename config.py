@@ -110,7 +110,7 @@ fname.add('results', '{derivatives_dir}/results')
 fname.add('figures', '{results}/figures')
 
 # The paths for data file input
-fname.add('source', '{sourcedata_dir}/sub-{subject:02d}/sub-{subject:02d}.bdf')
+fname.add('source', '{sourcedata_dir}/sub-{subject:02d}/eeg/sub-{subject:02d}.bdf')
 
 
 # The paths that are produced by the analysis steps
