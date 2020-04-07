@@ -55,6 +55,9 @@ if user == 'josealanis' and '.uni-marburg.de' in host:
 #     # pc at home
 #     data_dir = '../data'
 #     n_jobs = 8  # My workstation has 16 cores (we'll use 8).
+elif user == 'philipplange' and '.uni-marburg.de' in host:  # philipp's office mac
+    data_dir = '../data'
+    n_jobs = 4  # 4 used cores
 else:
     # Defaults
     data_dir = '../data'
@@ -74,27 +77,19 @@ montage = make_standard_montage(kind='standard_1020')
 exclude = ['EXG4', 'EXG5', 'EXG6', 'EXG7', 'EXG8']
 
 # subjects to use for analysis
-subjects = np.arange(1, 53)
+subjects = np.arange(2, 39)
 
 # relevant events in the paradigm
-event_ids = {'correct_target_button': 13,
-             'correct_non_target_button': 12,
-             'incorrect_target_button': 113,
-             'incorrect_non_target_button': 112,
-             'cue_0': 70,
-             'cue_1': 71,
-             'cue_2': 72,
-             'cue_3': 73,
-             'cue_4': 74,
-             'cue_5': 75,
-             'probe_0': 76,
-             'probe_1': 77,
-             'probe_2': 78,
-             'probe_3': 79,
-             'probe_4': 80,
-             'probe_5': 81,
-             'start_record': 127,
-             'pause_record': 245}
+event_ids = {'flanker_onset': 71,
+             'target_L_C': 11,
+             'target_R_C': 12,
+             'target_L_I': 21,
+             'target_R_I': 22,
+             'correct_incongruent': 101,
+             'correct_congruent': 102,
+             'incorrect_incongruent': 201,
+             'incorrect_congruent': 202,
+             'end_of_block': 245}
 
 ###############################################################################
 # Templates for filenames
