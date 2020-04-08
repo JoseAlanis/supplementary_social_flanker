@@ -28,35 +28,38 @@ def task_check():
         targets=[fname.system_check],
         actions=['python check_system.py']
     )
-#
-#
-# # This task executes a single analysis script for each subject, giving
-# # the subject as a command line parameter to the script.
-# def task_eeg_to_bids():
-#     """Step 00: Bring data set into a BIDS compliant directory structure."""
-#     # Run the script for each subject in a sub-task.
-#     for subject in subjects:
-#         yield dict(
-#             # This task should come after `task_check`
-#             task_dep=['check'],
-#
-#             # A name for the sub-task: set to the name of the subject
-#             name=subject,
-#
-#             # If any of these files change, the script needs to be re-run. Make
-#             # sure that the script itself is part of this list!
-#             file_dep=[fname.source(subject=subject),
-#                       '00_eeg_to_bids.py'],
-#
-#             # The files produced by the script
-#             targets=[fname.bids_data(subject=subject)],
-#
-#             # How the script needs to be called. Here we indicate it should
-#             # have one command line parameter: the name of the subject.
-#             actions=['python 00_eeg_to_bids.py %s' % subject]
-#         )
-#
-#
+
+
+# This task executes a single analysis script for each subject, giving
+# the subject as a command line parameter to the script.
+def task_eeg_to_bids():
+    """Step 00: Bring data set into a BIDS compliant directory structure."""
+    # Run the script for each subject in a sub-task.
+    for subject in subjects:
+        yield dict(
+            # This task should come after `task_check`
+            task_dep=['check'],
+
+            # A name for the sub-task: set to the name of the subject
+            name=subject,
+
+            # If any of these files change, the script needs to be re-run. Make
+            # sure that the script itself is part of this list!
+            file_dep=[fname.source(subject=subject,
+                                   source_type='eeg'),
+                      fname.source(subject=subject,
+                                   source_type='demographics'),
+                      '00_eeg_to_bids.py'],
+
+            # The files produced by the script
+            targets=[fname.bids_data(subject=subject)],
+
+            # How the script needs to be called. Here we indicate it should
+            # have one command line parameter: the name of the subject.
+            actions=['python 00_eeg_to_bids.py %s' % subject]
+        )
+
+
 # # This task executes a single analysis script for each subject, giving
 # # the subject as a command line parameter to the script.
 # def task_task_blocks():
