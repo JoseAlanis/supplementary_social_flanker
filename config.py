@@ -109,6 +109,8 @@ fname = FileNames()
 fname.add('data_dir', data_dir)
 # path to sourcedata
 fname.add('sourcedata_dir', '{data_dir}/sourcedata')
+# target path for data in bids format
+fname.add('bids_data', '{data_dir}/sub-{subject:03d}')
 # path to derivatives
 fname.add('derivatives_dir', '{data_dir}/derivatives')
 # path for reports on processing steps

@@ -45,7 +45,10 @@ def task_eeg_to_bids():
 
             # If any of these files change, the script needs to be re-run. Make
             # sure that the script itself is part of this list!
-            file_dep=[fname.source(subject=subject),
+            file_dep=[fname.source(subject=subject,
+                                   source_type='eeg'),
+                      fname.source(subject=subject,
+                                   source_type='demographics'),
                       '00_eeg_to_bids.py'],
 
             # The files produced by the script
