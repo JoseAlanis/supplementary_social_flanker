@@ -260,6 +260,9 @@ with open_report(fname.report(subject=subject)[0]) as report:
     report.add_htmls_to_section(htmls=bad_channels_identified,
                                 captions='Bad channels',
                                 section='Artefact detection')
+    report.add_figs_to_section(fig, 'Robust Z-Scores',
+                               section='Artefact detection',
+                               replace=True)
     report.add_figs_to_section(plot_artefacts, 'Clean data',
                                section='Artefact detection',
                                replace=True)
