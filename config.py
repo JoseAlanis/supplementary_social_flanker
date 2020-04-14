@@ -95,6 +95,18 @@ event_ids = {'flanker_onset': 71,
              'incorrect_congruent': 202,
              'end_of_block': 245}
 
+ids = {'245': 1,  # end of block
+       '71': 2,   # flanker onset
+       '11': 3,   # target_L_C
+       '12': 4,   # target_R_C
+       '21': 5,   # target_L_I
+       '22': 6,   # target_R_I
+       '101': 7,  # correct_incongruent
+       '102': 8,  # correct_congruent
+       '201': 9,  # incorrect_incongruent
+       '202': 10  # incorrect_congruent
+       }
+
 ###############################################################################
 # Templates for file names
 #
