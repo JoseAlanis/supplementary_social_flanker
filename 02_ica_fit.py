@@ -2,7 +2,9 @@
 ================================================
 Decompose EEG signal into independent components
 ================================================
+
 Authors: José C. García Alanis <alanis.jcg@gmail.com>
+
 License: BSD (3-clause)
 """
 from mne import pick_types, open_report
@@ -10,7 +12,7 @@ from mne.io import read_raw_fif
 from mne.preprocessing import ICA
 
 # All parameters are defined in config.py
-from config import fname, parser
+from config import fname, parser, n_jobs
 
 # Handle command line arguments
 args = parser.parse_args()
@@ -20,15 +22,16 @@ print('Run ICA for subject %s' % subject)
 
 ###############################################################################
 # 1) Import the output from previous processing step
-input_file = fname.output(subject=subject,
-                          processing_step='artefact_detection',
+input_file = fname.output(processing_step='repair_bads',
+                          subject=subject,
                           file_type='raw.fif')
 raw = read_raw_fif(input_file, preload=True)
 
 ###############################################################################
 #  2) Activate average reference and set ICA parameters
-raw_copy = raw.copy()
-raw_copy.apply_proj()
+# raw_copy = raw.copy()
+# raw_copy.apply_proj()
+raw.info['projs'] = []
 
 # ICA parameters
 n_components = 15
@@ -48,7 +51,7 @@ ica = ICA(n_components=n_components,
           fit_params=dict(ortho=False,
                           extended=True))
 
-ica.fit(raw_copy.filter(l_freq=1., h_freq=None),
+ica.fit(raw.copy().filter(l_freq=1., h_freq=None, n_jobs=n_jobs),
         picks=picks,
         reject=reject,
         reject_by_annotation=True)

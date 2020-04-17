@@ -9,19 +9,19 @@ License: BSD (3-clause)
 """
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
-cmap = cm.get_cmap('inferno')
+cmap = cm.get_cmap('inferno')  # noqa
 
 import numpy as np
 import pandas as pd
 
-from mne import pick_types, Annotations, open_report
+from mne import Annotations, open_report
 from mne.io import read_raw_fif
 
 from scipy.stats import median_absolute_deviation as mad
 from sklearn.preprocessing import normalize
 
 # All parameters are defined in config.py
-from config import fname, parser, n_jobs
+from config import fname, parser, n_jobs, sample_rate
 
 # Handle command line arguments
 args = parser.parse_args()
@@ -35,6 +35,7 @@ input_file = fname.output(subject=subject,
                           processing_step='raw_files',
                           file_type='raw.fif')
 raw = read_raw_fif(input_file, preload=True)
+
 # Setting up band-pass filter from 0.1 - 40 Hz
 #
 # FIR filter parameters
@@ -86,11 +87,13 @@ while True:
 
     # channels identified by deviation criterion
     bad_deviation = \
-        [raw_copy.ch_names[i] for i in np.where(np.abs(robust_z_scores_dev) > 5.0)[0]]
+        [raw_copy.ch_names[i]
+         for i in np.where(np.abs(robust_z_scores_dev) > 5.0)[0]]
 
     noisy.extend(bad_deviation)
 
-    if (iterations > 1 and (not bad_deviation or set(bad_deviation) == set(noisy))
+    if (iterations > 1 and
+            (not bad_deviation or set(bad_deviation) == set(noisy))
             or
             iterations > max_iter):
         break
@@ -159,14 +162,13 @@ raw.set_eeg_reference(ref_channels='average', projection=True)
 
 ###############################################################################
 # 4) Find distorted segments in data
-
 # channels to use in artefact detection procedure
-eeg_channels = pick_types(raw.info, eeg=True)
+eeg_channels = raw.copy().pick_types(eeg=True).ch_names
 
 # ignore fronto-polar channels
-ignored = [raw.ch_names.index(chan) for chan in raw.ch_names if
-           chan in {'Fp1', 'Fpz', 'Fp2', 'AF7', 'AF3', 'AFz', 'AF4', 'AF8'}]
-picks = [channel for channel in eeg_channels if channel not in ignored]
+picks = [raw.ch_names.index(channel)
+         for channel in eeg_channels if channel not in
+         {'Fp1', 'Fpz', 'Fp2', 'AF7', 'AF3', 'AFz', 'AF4', 'AF8'}]
 
 # use a copy of eeg data
 raw_copy = raw.copy()
@@ -191,11 +193,11 @@ for sample in range(0, data.shape[1]):
         peak.append(abs(data[channel][sample]))
     if max(peak) >= 300e-6:
         times.append(float(sample))
-        annotated_channels.append(raw_copy.ch_names[picks[int(np.argmax(peak))]])
+        annotated_channels.append(raw_copy.ch_names[picks[int(np.argmax(peak))]])  # noqa: E501
 # if artifact found create annotations for raw data
 if len(times) > 0:
     # get first time
-    first_time = raw_copy._first_time
+    first_time = raw_copy.first_time
     # column names
     annot_infos = ['onset', 'duration', 'description']
 
@@ -243,11 +245,12 @@ plot_artefacts = raw.plot(scalings=dict(eeg=50e-6, eog=50e-6),
 ###############################################################################
 # 5) Export data to .fif for further processing
 # output path
-output_path = fname.output(processing_step='artefact_detection',
+output_path = fname.output(processing_step='repair_bads',
                            subject=subject,
                            file_type='raw.fif')
 
-# save file
+# sample down and save file
+raw.resample(sfreq=sample_rate)
 raw.save(output_path, overwrite=True)
 
 ###############################################################################
