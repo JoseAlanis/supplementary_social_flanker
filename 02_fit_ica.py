@@ -22,7 +22,7 @@ print('Run ICA for subject %s' % subject)
 
 ###############################################################################
 # 1) Import the output from previous processing step
-input_file = fname.output(processing_step='repair_bads',
+input_file = fname.output(processing_step='artefact_detection',
                           subject=subject,
                           file_type='raw.fif')
 raw = read_raw_fif(input_file, preload=True)
