@@ -138,7 +138,8 @@ raw.set_annotations(annotations)
 # 7) Plot the data for report
 raw_plot = raw.plot(scalings=dict(eeg=50e-6, eog=50e-6),
                     n_channels=len(raw.info['ch_names']),
-                    show=False)
+                    show=True
+                    )
 
 ###############################################################################
 # 8) Export data to .fif for further processing
