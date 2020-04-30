@@ -85,26 +85,31 @@ subjects = np.arange(11, 13)
 
 # relevant events in the paradigm
 event_ids = {'flanker_onset': 71,
-             'target_L_C': 11,
-             'target_R_C': 12,
-             'target_L_I': 21,
-             'target_R_I': 22,
-             'correct_incongruent': 101,
-             'correct_congruent': 102,
-             'incorrect_incongruent': 201,
-             'incorrect_congruent': 202,
+             # first digit in 11 tells whether target stimulus was
+             # congruent (1) of incongruent (2) to the flanker stimuli.
+             # the second digit tells whether target stimulus was a left (1) or
+             # right (2) pointing arrow
+             'target_congruent_left': 11,
+             'target_congruent_right': 12,
+             'target_incongruent_left': 21,
+             'target_incongruent_right': 22,
+             # button presses
+             'correct_left': 101,
+             'correct_right': 102,
+             'incorrect_left': 201,
+             'incorrect_right': 202,
              'end_of_block': 245}
 
 ids = {'245': 1,  # end of block
-       '71': 2,   # flanker onset
-       '11': 3,   # target_L_C
-       '12': 4,   # target_R_C
-       '21': 5,   # target_L_I
-       '22': 6,   # target_R_I
-       '101': 7,  # correct_incongruent
-       '102': 8,  # correct_congruent
-       '201': 9,  # incorrect_incongruent
-       '202': 10  # incorrect_congruent
+       '71': 2,   # onset of flanker stimuli
+       '11': 3,   # target_C_L
+       '12': 4,   # target_C_R
+       '21': 5,   # target_I_L
+       '22': 6,   # target_I_R
+       '101': 7,  # left button pressed correctly
+       '102': 8,  # right button pressed correctly
+       '201': 9,  # left button pressed incorrectly
+       '202': 10  # right button pressed incorrectly
        }
 
 ###############################################################################
