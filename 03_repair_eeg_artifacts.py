@@ -1,4 +1,3 @@
-
 """
 ===============================================
 Repair EEG artefacts caused by ocular movements
@@ -8,8 +7,7 @@ correlated the time course of the electrooculogram).
 Authors: José C. García Alanis <alanis.jcg@gmail.com>
 License: BSD (3-clause)
 """
-import matplotlib.pyplot as plt
-
+# import matplotlib.pyplot as plt
 from mne import open_report
 from mne.io import read_raw_fif
 from mne.preprocessing import read_ica, create_eog_epochs, corrmap
@@ -92,23 +90,23 @@ ica = read_ica(input_file)
 # (just in case previous step missed any bad components)
 
 # load template file
-template_raw_file = fname.output(subject=11,
+template_raw_file = fname.output(subject=12,
                                  processing_step='repair_bads',
                                  file_type='raw.fif')
 template_raw = read_raw_fif(template_raw_file)
 
 # and template ICA
-template_ica_file = fname.output(subject=11,
+template_ica_file = fname.output(subject=12,
                                  processing_step='fit_ica',
                                  file_type='ica.fif')
 template_ica_file = read_ica(template_ica_file)
 
 # compute correlations with template
 corrmap(icas=[template_ica_file, ica],
-        template=(0, 1), threshold=0.9, label='blink_up', plot=False)
+        template=(0, 0), threshold=0.9, label='blink_up', plot=False)
 # placeholder for later, when a suitable component has been found
-# corrmap(icas=[template_ica_file, ica],
-#         template=(0, 4), threshold=0.9, label='blink_side', plot=False)
+corrmap(icas=[template_ica_file, ica],
+        template=(0, 3), threshold=0.9, label='blink_side', plot=False)
 
 # if new components were found add them to exclusion list
 if ica.labels_['blink_up'] and any(ica.labels_['blink_up']) not in ica.exclude:

@@ -81,7 +81,7 @@ montage = make_standard_montage(kind='standard_1020')
 exclude = ['EXG4', 'EXG5', 'EXG6', 'EXG7', 'EXG8']
 
 # subjects to use for analysis
-subjects = np.arange(11, 12)
+subjects = np.arange(11, 13)
 
 # relevant events in the paradigm
 event_ids = {'flanker_onset': 71,
