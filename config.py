@@ -100,16 +100,16 @@ event_ids = {'flanker_onset': 71,
              'incorrect_right': 202,
              'end_of_block': 245}
 
-ids = {'245': 1,  # end of block
-       '71': 2,   # onset of flanker stimuli
-       '11': 3,   # target_C_L
-       '12': 4,   # target_C_R
-       '21': 5,   # target_I_L
-       '22': 6,   # target_I_R
-       '101': 7,  # left button pressed correctly
-       '102': 8,  # right button pressed correctly
-       '201': 9,  # left button pressed incorrectly
-       '202': 10  # right button pressed incorrectly
+ev_ids = {'245': 1,  # end of block
+          '71': 2,   # onset of flanker stimuli
+          '11': 3,   # target_C_L
+          '12': 4,   # target_C_R
+          '21': 5,   # target_I_L
+          '22': 6,   # target_I_R
+         '101': 7,  # left button pressed correctly
+         '102': 8,  # right button pressed correctly
+         '201': 9,  # left button pressed incorrectly
+         '202': 10  # right button pressed incorrectly
        }
 
 ###############################################################################
