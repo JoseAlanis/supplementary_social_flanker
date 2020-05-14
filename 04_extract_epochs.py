@@ -54,25 +54,40 @@ block = []
 rt = []
 reaction = []
 triallist = []
+broken = []
 trial = 0
-rtarray = np.zeros((1248, 4))
+rtarray = np.zeros((1248, 5))
 # recode trigger events
 for event in range(len(new_evs[:, 2])):
     # if event is a flanker
     if new_evs[event, 2] == 2:
         # save trial idx
         triallist.append(trial)
-
+        if new_evs[event + 1, 2] == 3:
+            flanker.append('left')
+            target.append('congruent')
+        elif new_evs[event + 1, 2] == 4:
+            flanker.append('right')
+            target.append('congruent')
+        elif new_evs[event + 1, 2] == 5:
+            flanker.append('left')
+            target.append('incongruent')
+        elif new_evs[event + 1, 2] == 6:
+            flanker.append('right')
+            target.append('incongruent')
         # first check a response followed the target
         if new_evs[event+2, 2] not in {7, 8, 9, 10} or new_evs[event+1, 2] in {7, 8, 9, 10}:
             print('trial %s is broken' % event)
             reaction.append(np.nan)
+            broken.append('broken')
             rt.append(np.nan)
         else:
             if new_evs[event + 2, 2] in {7, 8}:
                 reaction.append('correct')
+                broken.append('valid')
             elif new_evs[event + 2, 2] in {9, 10}:
                 reaction.append('incorrect')
+                broken.append('valid')
             trial_rt = (new_evs[event+2, 0] - new_evs[event+1, 0]) / sfreq
             rt.append(trial_rt)
         if trial < 48:
@@ -99,38 +114,47 @@ for event in range(len(new_evs[:, 2])):
         trial += 1
 
 
-metadata = {'trial':triallist,
-            'condition':block,
-            'reaction':reaction,
-            'rt':rt}
+metadata = {'trial': triallist,
+            'condition': block,
+            'reaction': reaction,
+            'rt': rt,
+            'target': target,
+            'flanker': flanker,
+            'broken': broken}
 
 df = pd.DataFrame(metadata)
+df['subject'] = subject
+# save metadata to df
+df.to_csv('/Users/philipplange/PycharmProjects/social_flanker/ernsoc_data_bids/metadata/subject' + str(subject) +  '.tsv',
+          sep=' ')
 
+epoch_events =  events[0].copy()
 
-    # --- 1st check: if next event is a congruent left stimulus ---
-if new_evs[event, 2] == 3:
-    if new_evs[event + 1, 2] == 7:  # correct button left
-        new_evs[event + 1, 2] = 11  # correct left congruent
-    elif new_evs[event + 1, 2] == 10:  # incorrect right button
-        new_evs[event + 1, 2] = 12  # incorrect left congruent
+for event in range(len(epoch_events[:, 2])):
+#  --- 1st check: if next event is a congruent left stimulus ---
+if epoch_events[event, 2] == 2:
+    if new_evs[event+2, 2] not in {7, 8, 9, 10} or new_evs[event+1, 2] in {7, 8, 9, 10}:
+        epoch_events[event + 1, 2] = 11  # correct left congruent
+    elif epoch_events[event + 1, 2] == 10:  # incorrect right button
+        epoch_events[event + 1, 2] = 12  # incorrect left congruent
 # check if target is incongruent left
-elif new_evs[event, 2] == 5:  # incongruent left stimulus
-    if new_evs[event + 1, 2] == 7:
-        new_evs[event + 1, 2] = 13  # correct left incongruent
-    elif new_evs[event + 1, 2] == 10:
-        new_evs[event + 1, 2] = 14  # incorrect left incongruent
+elif epoch_events[event, 2] == 5:  # incongruent left stimulus
+    if epoch_events[event + 1, 2] == 7:
+        epoch_events[event + 1, 2] = 13  # correct left incongruent
+    elif epoch_events[event + 1, 2] == 10:
+        epoch_events[event + 1, 2] = 14  # incorrect left incongruent
 # check if target is congruent right
-elif new_evs[event, 2] == 4:
-    if new_evs[event + 1, 2] == 8:  # right button correct
-        new_evs[event + 1, 2] = 15  # correct right congruent
-    elif new_evs[event + 1, 2] == 9:  # left button incorrect
-        new_evs[event + 1, 2] = 16  # incorrect right congruent
+elif epoch_events[event, 2] == 4:
+    if epoch_events[event + 1, 2] == 8:  # right button correct
+        epoch_events[event + 1, 2] = 15  # correct right congruent
+    elif epoch_events[event + 1, 2] == 9:  # left button incorrect
+        epoch_events[event + 1, 2] = 16  # incorrect right congruent
 # check if target is right incongruent
-elif new_evs[event, 2] == 6:
-    if new_evs[event + 1, 2] == 8:  # correct right button
-        new_evs[event + 1, 2] = 17  # correct right incongruent
-    elif new_evs[event + 1, 2] == 9:  # left button incorrect
-        new_evs[event + 1, 2] = 18  # incorrect right incongruent
+elif epoch_events[event, 2] == 6:
+    if epoch_events[event + 1, 2] == 8:  # correct right button
+        epoch_events[event + 1, 2] = 17  # correct right incongruent
+    elif epoch_events[event + 1, 2] == 9:  # left button incorrect
+        epoch_events[event + 1, 2] = 18  # incorrect right incongruent
 
 
 
