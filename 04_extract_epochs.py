@@ -91,7 +91,6 @@ for event in range(len(new_evs[:, 2])):
             reaction.append(np.nan)
             broken.append(trial)
             rt.append(np.nan)
-
         # check if that answer was correct or incorrect
         else:
             if new_evs[event + 2, 2] in {7, 8}:
@@ -166,50 +165,42 @@ df.to_csv('/Users/philipplange/PycharmProjects/social_flanker/ernsoc_data_bids/m
 
 
 epoch_events = new_evs[np.where((new_evs[:, 2] == 11) | (new_evs[:, 2] == 12) | (new_evs[:, 2] == 13) | (new_evs[:, 2] == 14))]
+# drop rows with at least 1 nan
+metadata_epochs = df.dropna()
+
+target_ids = {'congruent_correct': 11,
+              'incongruent_correct': 12,
+
+              'congruent_incorrect': 13,
+              'incongruent_incorrect': 14}
+
+###############################################################################
+# 4) Extract the epochs
+
+# rejection threshold
+reject = dict(eeg=300e-6)
+
+target_epochs = Epochs(raw,
+                       epoch_events,
+                       target_ids,
+                       on_missing='ignore',
+                       metadata=metadata_epochs,
+                       tmin=-1,
+                       tmax=1,
+                       baseline=None,
+                       preload=True,
+                       reject_by_annotation=True,
+                       reject=reject)
+
+# 5) Save epochs
+
+# output path for cues
+reaction_output_path = fname.output(processing_step='reaction_epochs',
+                               subject=subject,
+                               file_type='epo.fif')
+# resample and save to disk
+target_epochs.resample(sfreq=100.)
+target_epochs.save(reaction_output_path, overwrite=True)
 
 
-epoch_events =  events[0].copy()
-
-for event in range(len(epoch_events[:, 2])):
-#  --- 1st check: if next event is a congruent left stimulus ---
-if epoch_events[event, 2] == 2:
-    if new_evs[event+2, 2] not in {7, 8, 9, 10} or new_evs[event+1, 2] in {7, 8, 9, 10}:
-        epoch_events[event + 1, 2] = 11  # correct left congruent
-    elif epoch_events[event + 1, 2] == 10:  # incorrect right button
-        epoch_events[event + 1, 2] = 12  # incorrect left congruent
-# check if target is incongruent left
-elif epoch_events[event, 2] == 5:  # incongruent left stimulus
-    if epoch_events[event + 1, 2] == 7:
-        epoch_events[event + 1, 2] = 13  # correct left incongruent
-    elif epoch_events[event + 1, 2] == 10:
-        epoch_events[event + 1, 2] = 14  # incorrect left incongruent
-# check if target is congruent right
-elif epoch_events[event, 2] == 4:
-    if epoch_events[event + 1, 2] == 8:  # right button correct
-        epoch_events[event + 1, 2] = 15  # correct right congruent
-    elif epoch_events[event + 1, 2] == 9:  # left button incorrect
-        epoch_events[event + 1, 2] = 16  # incorrect right congruent
-# check if target is right incongruent
-elif epoch_events[event, 2] == 6:
-    if epoch_events[event + 1, 2] == 8:  # correct right button
-        epoch_events[event + 1, 2] = 17  # correct right incongruent
-    elif epoch_events[event + 1, 2] == 9:  # left button incorrect
-        epoch_events[event + 1, 2] = 18  # incorrect right incongruent
-
-
-
-
-
-target_events = {'correct_LC': 11,
-                 'incorrect_LC': 12,
-
-                 'correct_LI': 13,
-                 'incorrect_LI': 14,
-
-                 'correct_RC': 15,
-                 'incorrect_RC': 16,
-
-                 'correct_RI': 17,
-                 'incorrect_RI': 18
-                 }
 
