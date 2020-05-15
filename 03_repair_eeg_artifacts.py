@@ -2,9 +2,12 @@
 ===============================================
 Repair EEG artefacts caused by ocular movements
 ===============================================
+
 Identify "bad" components in ICA solution (e.g., components which are highly
 correlated the time course of the electrooculogram).
+
 Authors: José C. García Alanis <alanis.jcg@gmail.com>
+
 License: BSD (3-clause)
 """
 import numpy as np
