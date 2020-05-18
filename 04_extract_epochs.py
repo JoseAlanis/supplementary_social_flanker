@@ -205,7 +205,7 @@ reaction_epochs = Epochs(raw,
                          baseline=None,
                          preload=True,
                          reject_by_annotation=True,
-                         reject=None)
+                         reject=reject)
 
 ###############################################################################
 # 7) Save epochs
