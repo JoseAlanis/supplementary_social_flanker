@@ -135,6 +135,7 @@ fname.add('reports_dir', '{derivatives_dir}/reports')
 # path for results and figures
 fname.add('results', '{derivatives_dir}/results')
 fname.add('figures', '{results}/figures')
+fname.add('dataframes', '{results}/dataframes')
 
 
 def source_file(files, source_type, subject):

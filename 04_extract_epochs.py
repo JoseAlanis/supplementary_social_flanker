@@ -68,6 +68,7 @@ new_evs = events[0].copy()
 sfreq = raw.info['sfreq']
 block_end = new_evs[new_evs[:, 2] == 1, 0] / sfreq
 
+# initialise place holders for metadata entries
 flanker = []
 target = []
 block = []
@@ -84,15 +85,19 @@ for event in range(len(new_evs[:, 2])):
         # save trial idx
         triallist.append(trial)
 
-        # first check a response followed the target
-        if new_evs[event+2, 2] not in {7, 8, 9, 10} or new_evs[event+1, 2] in {7, 8, 9, 10}:
+        # first check if the subsequent target if followed by a response
+        if new_evs[event+2, 2] \
+                not in {7, 8, 9, 10} or new_evs[event+1, 2] in {7, 8, 9, 10}:
+            # if no response followed, the trial is broken (i.e., there will be
+            # no corresponding eeg segment for analysis)
             print('trial %s is broken' % event)
-
+            # append nan for reaction dependent measures
             reaction.append(np.nan)
             broken.append(trial)
             rt.append(np.nan)
-        # check if that answer was correct or incorrect
+        # if an answer followed, check if it was correct or incorrect
         else:
+            # correct reactions
             if new_evs[event + 2, 2] in {7, 8}:
                 reaction.append('correct')
                 # if target congruent
@@ -102,7 +107,7 @@ for event in range(len(new_evs[:, 2])):
                 elif new_evs[event + 1, 2] in {5, 6}:
                     # correct incongruent
                     new_evs[event + 2, 2] = 12
-
+            # incorrect reactions
             elif new_evs[event + 2, 2] in {9, 10}:
                 reaction.append('incorrect')
                 # if target congruent
@@ -115,24 +120,27 @@ for event in range(len(new_evs[:, 2])):
 
             trial_rt = (new_evs[event+2, 0] - new_evs[event+1, 0]) / sfreq
             rt.append(trial_rt)
-
+        # append block variable identifying the ongoing condition
         if trial < 48:
+            # practice
             block.append(0)
         elif trial < 448:
+            # individual condition
             block.append(1)
         elif trial < 848:
-            # subjects with cond 3 first
+            # subjects with cond 3 first (i.e., negative interaction)
             if int(subject) in {2, 4, 6, 8, 10, 11, 13, 15, 17, 19, 21, 23, 28}:
                 block.append(3)
             else:
                 block.append(2)
         elif trial < 1248:
-            # subjects with cond 2 first
+            # subjects with cond 2 first (i.e., positive interaction)
             if int(subject) in {2, 4, 6, 8, 10, 11, 13, 15, 17, 19, 21, 23, 28}:
                 block.append(2)
             else:
                 block.append(3)
 
+        # add information about the flanker-target combination
         if new_evs[event + 1, 2] == 3:
             flanker.append('left')
             target.append('congruent')
@@ -149,58 +157,62 @@ for event in range(len(new_evs[:, 2])):
         # add 1 to trial counter
         trial += 1
 
-
+###############################################################################
+# 4) Create data frame with epochs metadata
 metadata = {'trial': triallist,
             'condition': block,
             'reaction': reaction,
             'rt': rt,
             'target': target,
-            'flanker': flanker}
+            'flanker': flanker,
+            'block': block,
+            'subject': np.repeat(subject, len(triallist))}
+metadata = pd.DataFrame(metadata)
 
-df = pd.DataFrame(metadata)
-df['subject'] = subject
+# save metadata structure for further analysis
+subj = str(subject).rjust(3, '0')
+metadata_export = fname.dataframes + '/rt_data_sub-%s.tsv' % (subj)
+
 # save metadata to df
-df.to_csv('/Users/philipplange/PycharmProjects/social_flanker/ernsoc_data_bids/metadata/subject' + str(subject) +  '.tsv',
-          sep=' ')
-
-
-epoch_events = new_evs[np.where((new_evs[:, 2] == 11) | (new_evs[:, 2] == 12) | (new_evs[:, 2] == 13) | (new_evs[:, 2] == 14))]
-# drop rows with at least 1 nan
-metadata_epochs = df.dropna()
-
-target_ids = {'congruent_correct': 11,
-              'incongruent_correct': 12,
-
-              'congruent_incorrect': 13,
-              'incongruent_incorrect': 14}
+metadata.to_csv(metadata_export,
+                sep='\t')
 
 ###############################################################################
-# 4) Extract the epochs
+# 5) Set descriptive event names for extraction of epochs
+reaction_ids = {'correct_congruent': 11,
+                'correct_incongruent': 12,
+                'incorrect_congruent': 13,
+                'incorrect_incongruent': 14}
+
+# only keep reaction events
+react_events = new_evs[np.where((new_evs[:, 2] >= 11) & (new_evs[:, 2] <= 14))]
+
+###############################################################################
+# 6) Extract the epochs
+# drop metadata rows that contain nas (e.g., missed reactions)
+metadata = metadata.dropna()
 
 # rejection threshold
 reject = dict(eeg=300e-6)
 
-target_epochs = Epochs(raw,
-                       epoch_events,
-                       target_ids,
-                       on_missing='ignore',
-                       metadata=metadata_epochs,
-                       tmin=-1,
-                       tmax=1,
-                       baseline=None,
-                       preload=True,
-                       reject_by_annotation=True,
-                       reject=reject)
+reaction_epochs = Epochs(raw,
+                         react_events,
+                         reaction_ids,
+                         on_missing='ignore',
+                         metadata=metadata,
+                         tmin=-1.5,
+                         tmax=1.5,
+                         baseline=None,
+                         preload=True,
+                         reject_by_annotation=True,
+                         reject=None)
 
-# 5) Save epochs
-
+###############################################################################
+# 7) Save epochs
 # output path for cues
 reaction_output_path = fname.output(processing_step='reaction_epochs',
-                               subject=subject,
-                               file_type='epo.fif')
+                                    subject=subject,
+                                    file_type='epo.fif')
 # resample and save to disk
-target_epochs.resample(sfreq=100.)
-target_epochs.save(reaction_output_path, overwrite=True)
-
-
-
+reaction_output_path.resample(sfreq=100.)
+reaction_output_path.save(reaction_output_path, overwrite=True)
