@@ -36,6 +36,7 @@ os.makedirs(fname.reports_dir, exist_ok=True)
 # directories for results
 os.makedirs(fname.results, exist_ok=True)
 os.makedirs(fname.figures, exist_ok=True)
+os.makedirs(fname.dataframes, exist_ok=True)
 
 # Prints some information about the system
 mne.sys_info()

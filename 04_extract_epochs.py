@@ -1,3 +1,16 @@
+"""
+==================================
+Extract epochs from continuous EEG
+==================================
+
+Extract epochs for each experimental condition
+
+Authors:
+Philipp Lange ≤philipp.lange0309@gmail.com>
+José C. García Alanis <alanis.jcg@gmail.com>
+
+License: BSD (3-clause)
+"""
 import pandas as pd
 import numpy as np
 
@@ -7,8 +20,16 @@ from mne.io import read_raw_fif
 # All parameters are defined in config.py
 from config import fname, parser, LoggingFormat
 
+# Handle command line arguments
 args = parser.parse_args()
 subject = args.subject
+
+print(LoggingFormat.PURPLE +
+      LoggingFormat.BOLD +
+      'Extracting epochs for subject %s' % subject +
+      LoggingFormat.END)
+
+###############################################################################
 # 1) Import the output from previous processing step
 input_file = fname.output(subject=subject,
                           processing_step='repaired_with_ica',
@@ -18,8 +39,8 @@ raw = read_raw_fif(input_file, preload=True)
 # only keep EEG channels
 raw.pick_types(eeg=True)
 
+###############################################################################
 # 2) Get events from continuous EEG data
-
 # create a dictionary with event IDs for standardised handling
 ev_ids = {'245': 1,  # end of block
           '71': 2,  # onset of flanker stimuli
@@ -44,52 +65,154 @@ events = events_from_annotations(raw, event_id=ev_ids, regexp=None)
 new_evs = events[0].copy()
 
 # global variables
-trial = 0
 sfreq = raw.info['sfreq']
 block_end = new_evs[new_evs[:, 2] == 1, 0] / sfreq
-# place holders for results
-first_condition = []
-probe_ids = []
-reaction = []
+
+# initialise place holders for metadata entries
+flanker = []
+target = []
+block = []
 rt = []
+reaction = []
+triallist = []
+broken = []
+trial = 0
 
+# recode trigger events
 for event in range(len(new_evs[:, 2])):
-    # --- 1st check: if next event is a congruent left stimulus ---
-    if new_evs[event, 2] == 3:
-        if new_evs[event + 1, 2] == 7:  # correct button left
-            new_evs[event + 1, 2] = 11  # correct left congruent
-        elif new_evs[event + 1, 2] == 10:  # incorrect left button
-            new_evs[event + 1, 2] = 12  # incorrect left congruent
-    # check if target is incongruent left
-    elif new_evs[event, 2] == 5:        # incongruent left stimulus
-        if new_evs[event + 1, 2] == 7:
-            new_evs[event + 1, 2] = 13  # correct left incongruent
-        elif new_evs[event + 1, 2] == 10:
-            new_evs[event + 1, 2] = 14  # incorrect left incongruent
-    # check if target is congruent right
-    elif new_evs[event, 2] == 4:
-        if new_evs[event + 1, 2] == 8:      # right button correct
-            new_evs[event + 1, 2] = 15      # correct right congruent
-        elif new_evs[event + 1, 2] == 9:    # left button incorrect
-            new_evs[event + 1, 2] = 16      # incorrect right congruent
-    # check if target is right incongruent
-    elif new_evs[event, 2] == 6:
-        if new_evs[event + 1, 2] == 8:      # correct right button
-            new_evs[event + 1, 2] = 17      # correct right incongruent
-        elif new_evs[event + 1, 2] == 9:    # left button incorrect
-            new_evs[event + 1, 2] = 18      # incorrect right incongruent
+    # if event is a flanker
+    if new_evs[event, 2] == 2:
+        # save trial idx
+        triallist.append(trial)
 
+        # first check if the subsequent target if followed by a response
+        if new_evs[event+2, 2] \
+                not in {7, 8, 9, 10} or new_evs[event+1, 2] in {7, 8, 9, 10}:
+            # if no response followed, the trial is broken (i.e., there will be
+            # no corresponding eeg segment for analysis)
+            print('trial %s is broken' % event)
+            # append nan for reaction dependent measures
+            reaction.append(np.nan)
+            broken.append(trial)
+            rt.append(np.nan)
+        # if an answer followed, check if it was correct or incorrect
+        else:
+            # correct reactions
+            if new_evs[event + 2, 2] in {7, 8}:
+                reaction.append('correct')
+                # if target congruent
+                if new_evs[event + 1, 2] in {3, 4}:
+                    # correct congruent
+                    new_evs[event + 2, 2] = 11
+                elif new_evs[event + 1, 2] in {5, 6}:
+                    # correct incongruent
+                    new_evs[event + 2, 2] = 12
+            # incorrect reactions
+            elif new_evs[event + 2, 2] in {9, 10}:
+                reaction.append('incorrect')
+                # if target congruent
+                if new_evs[event + 1, 2] in {3, 4}:
+                    # incorrect congruent
+                    new_evs[event + 2, 2] = 13
+                elif new_evs[event + 1, 2] in {5, 6}:
+                    # incorrect incongruent
+                    new_evs[event + 2, 2] = 14
 
+            trial_rt = (new_evs[event+2, 0] - new_evs[event+1, 0]) / sfreq
+            rt.append(trial_rt)
+        # append block variable identifying the ongoing condition
+        if trial < 48:
+            # practice
+            block.append(0)
+        elif trial < 448:
+            # individual condition
+            block.append(1)
+        elif trial < 848:
+            # subjects with cond 3 first (i.e., negative interaction)
+            if int(subject) in {2, 4, 6, 8, 10, 11, 13, 15, 17, 19, 21, 23, 28}:
+                block.append(3)
+            else:
+                block.append(2)
+        elif trial < 1248:
+            # subjects with cond 2 first (i.e., positive interaction)
+            if int(subject) in {2, 4, 6, 8, 10, 11, 13, 15, 17, 19, 21, 23, 28}:
+                block.append(2)
+            else:
+                block.append(3)
 
-target_events = {'correct_LC': 11,
-                 'incorrect_LC': 12,
+        # add information about the flanker-target combination
+        if new_evs[event + 1, 2] == 3:
+            flanker.append('left')
+            target.append('congruent')
+        elif new_evs[event + 1, 2] == 4:
+            flanker.append('right')
+            target.append('congruent')
+        elif new_evs[event + 1, 2] == 5:
+            flanker.append('left')
+            target.append('incongruent')
+        elif new_evs[event + 1, 2] == 6:
+            flanker.append('right')
+            target.append('incongruent')
 
-                 'correct_LI': 13,
-                 'incorrect_LI': 14,
+        # add 1 to trial counter
+        trial += 1
 
-                 'correct_RC': 15,
-                 'incorrect_RC': 16,
+###############################################################################
+# 4) Create data frame with epochs metadata
+metadata = {'trial': triallist,
+            'condition': block,
+            'reaction': reaction,
+            'rt': rt,
+            'target': target,
+            'flanker': flanker,
+            'block': block,
+            'subject': np.repeat(subject, len(triallist))}
+metadata = pd.DataFrame(metadata)
 
-                 'correct_RI': 17,
-                 'incorrect_RI': 18
-                 }
+# save metadata structure for further analysis
+subj = str(subject).rjust(3, '0')
+metadata_export = fname.dataframes + '/rt_data_sub-%s.tsv' % (subj)
+
+# save metadata to df
+metadata.to_csv(metadata_export,
+                sep='\t')
+
+###############################################################################
+# 5) Set descriptive event names for extraction of epochs
+reaction_ids = {'correct_congruent': 11,
+                'correct_incongruent': 12,
+                'incorrect_congruent': 13,
+                'incorrect_incongruent': 14}
+
+# only keep reaction events
+react_events = new_evs[np.where((new_evs[:, 2] >= 11) & (new_evs[:, 2] <= 14))]
+
+###############################################################################
+# 6) Extract the epochs
+# drop metadata rows that contain nas (e.g., missed reactions)
+metadata = metadata.dropna()
+
+# rejection threshold
+reject = dict(eeg=300e-6)
+
+reaction_epochs = Epochs(raw,
+                         react_events,
+                         reaction_ids,
+                         on_missing='ignore',
+                         metadata=metadata,
+                         tmin=-1.5,
+                         tmax=1.5,
+                         baseline=None,
+                         preload=True,
+                         reject_by_annotation=True,
+                         reject=reject)
+
+###############################################################################
+# 7) Save epochs
+# output path for cues
+reaction_output_path = fname.output(processing_step='reaction_epochs',
+                                    subject=subject,
+                                    file_type='epo.fif')
+# resample and save to disk
+reaction_output_path.resample(sfreq=100.)
+reaction_output_path.save(reaction_output_path, overwrite=True)
