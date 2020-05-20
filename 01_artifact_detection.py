@@ -47,7 +47,7 @@ raw = read_raw_fif(input_file, preload=True)
 # - Lower transition bandwidth: 0.10 Hz (-6 dB cutoff frequency: 0.05 Hz)
 # - Upper passband edge: 40.00 Hz
 # - Upper transition bandwidth: 10.00 Hz (-6 dB cutoff frequency: 45.00 Hz)
-# - Filter length: 8449 samples (33.004 sec)
+# - Filter length: 33 sec
 raw.filter(l_freq=0.1, h_freq=40.,
            picks=['eeg', 'eog'],
            filter_length='auto',

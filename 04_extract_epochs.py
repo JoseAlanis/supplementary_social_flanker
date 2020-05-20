@@ -75,7 +75,8 @@ block = []
 rt = []
 reaction = []
 triallist = []
-broken = []
+too_soon = []
+missed = []
 trial = 0
 
 # recode trigger events
@@ -87,14 +88,24 @@ for event in range(len(new_evs[:, 2])):
 
         # first check if the subsequent target if followed by a response
         if new_evs[event+2, 2] \
-                not in {7, 8, 9, 10} or new_evs[event+1, 2] in {7, 8, 9, 10}:
-            # if no response followed, the trial is broken (i.e., there will be
+                not in {7, 8, 9, 10}:
+            # if no response followed, the trial is missed (i.e., there will be
             # no corresponding eeg segment for analysis)
-            print('trial %s is broken' % event)
+            print('response missed in trial %s' % event)
             # append nan for reaction dependent measures
             reaction.append(np.nan)
-            broken.append(trial)
+            missed.append(trial)
             rt.append(np.nan)
+        elif new_evs[event+1, 2] in {7, 8, 9, 10}:
+            # if a response followed the flankers (before target onset)
+            # the trial is too_soon (i.e., there will be
+            # no corresponding eeg segment for analysis)
+            print('response to soon in trial %s' % event)
+            # append nan for reaction dependent measures
+            reaction.append(np.nan)
+            too_soon.append(trial)
+            rt.append(np.nan)
+
         # if an answer followed, check if it was correct or incorrect
         else:
             # correct reactions
@@ -118,6 +129,7 @@ for event in range(len(new_evs[:, 2])):
                     # incorrect incongruent
                     new_evs[event + 2, 2] = 14
 
+            # sace trial rt
             trial_rt = (new_evs[event+2, 0] - new_evs[event+1, 0]) / sfreq
             rt.append(trial_rt)
         # append block variable identifying the ongoing condition
@@ -129,28 +141,33 @@ for event in range(len(new_evs[:, 2])):
             block.append(1)
         elif trial < 848:
             # subjects with cond 3 first (i.e., negative interaction)
-            if int(subject) in {2, 4, 6, 8, 10, 11, 13, 15, 17, 19, 21, 23, 28}:
+            if int(subject) in {2, 4, 6, 8, 10, 11, 13, 15, 17, 19, 21, 23, 28,
+                                30, 32, 34, 35, 36}:
                 block.append(3)
             else:
                 block.append(2)
         elif trial < 1248:
             # subjects with cond 2 first (i.e., positive interaction)
-            if int(subject) in {2, 4, 6, 8, 10, 11, 13, 15, 17, 19, 21, 23, 28}:
+            if int(subject) in {2, 4, 6, 8, 10, 11, 13, 15, 17, 19, 21, 23, 28,
+                                30, 32, 34, 35, 36}:
                 block.append(2)
             else:
                 block.append(3)
 
+        i = 1
+        while new_evs[event + i, 2] not in {3, 4, 5, 6}:
+            i += 1
         # add information about the flanker-target combination
-        if new_evs[event + 1, 2] == 3:
+        if new_evs[event + i, 2] == 3:
             flanker.append('left')
             target.append('congruent')
-        elif new_evs[event + 1, 2] == 4:
+        elif new_evs[event + i, 2] == 4:
             flanker.append('right')
             target.append('congruent')
-        elif new_evs[event + 1, 2] == 5:
+        elif new_evs[event + i, 2] == 5:
             flanker.append('left')
             target.append('incongruent')
-        elif new_evs[event + 1, 2] == 6:
+        elif new_evs[event + i, 2] == 6:
             flanker.append('right')
             target.append('incongruent')
 
@@ -171,7 +188,7 @@ metadata = pd.DataFrame(metadata)
 
 # save metadata structure for further analysis
 subj = str(subject).rjust(3, '0')
-metadata_export = fname.dataframes + '/rt_data_sub-%s.tsv' % (subj)
+metadata_export = fname.dataframes + '/rt_data_sub-%s.tsv' % subj
 
 # save metadata to df
 metadata.to_csv(metadata_export,
@@ -214,5 +231,5 @@ reaction_output_path = fname.output(processing_step='reaction_epochs',
                                     subject=subject,
                                     file_type='epo.fif')
 # resample and save to disk
-reaction_output_path.resample(sfreq=100.)
-reaction_output_path.save(reaction_output_path, overwrite=True)
+reaction_epochs.resample(sfreq=100.)
+reaction_epochs.save(reaction_output_path, overwrite=True)

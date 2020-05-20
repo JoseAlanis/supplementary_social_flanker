@@ -75,8 +75,8 @@ date = date_of_record.strftime('%Y-%m-%d')
 
 # here, we compute only and approximate of the subjects birthday
 # this is to keep the date anonymous (at least to some degree)
-age = demo[demo.subject_id == int('10%s' % subject)].age
-sex = demo[demo.subject_id == int('10%s' % subject)].sex
+age = demo[demo.subject_id == int('%s' % subject)].age
+sex = demo[demo.subject_id == int('%s' % subject)].sex
 
 year_of_birth = int(date.split('-')[0]) - int(age)
 approx_birthday = (year_of_birth,
