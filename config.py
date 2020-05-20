@@ -15,7 +15,6 @@ import getpass
 from socket import getfqdn
 
 import argparse
-import numpy as np
 
 from utils import FileNames
 
@@ -81,7 +80,9 @@ montage = make_standard_montage(kind='standard_1020')
 exclude = ['EXG4', 'EXG5', 'EXG6', 'EXG7', 'EXG8']
 
 # subjects to use for analysis
-subjects = np.arange(11, 13)
+subjects = [2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 14, 15, 16, 17, 18,
+            19, 20, 23, 24, 27, 28, 29, 31, 32, 33, 34, 35,
+            36, 37]
 
 # relevant events in the paradigm
 event_ids = {'flanker_onset': 71,
@@ -106,11 +107,11 @@ ev_ids = {'245': 1,  # end of block
           '12': 4,   # target_C_R
           '21': 5,   # target_I_L
           '22': 6,   # target_I_R
-         '101': 7,  # left button pressed correctly
-         '102': 8,  # right button pressed correctly
-         '201': 9,  # left button pressed incorrectly
-         '202': 10  # right button pressed incorrectly
-       }
+          '101': 7,  # left button pressed correctly
+          '102': 8,  # right button pressed correctly
+          '201': 9,  # left button pressed incorrectly
+          '202': 10  # right button pressed incorrectly
+          }
 
 ###############################################################################
 # Templates for file names
@@ -140,9 +141,9 @@ fname.add('dataframes', '{results}/dataframes')
 
 def source_file(files, source_type, subject):
     if source_type == 'eeg':
-        return files.sourcedata_dir + '/sub-%02d/%s/10%s_ernsoc.bdf' % (subject, source_type, subject)  # noqa: E501
+        return files.sourcedata_dir + '/sub-%02d/%s/10%02d_ern_soc.bdf' % (subject, source_type, subject)  # noqa: E501
     elif source_type == 'demographics':
-        return files.sourcedata_dir + '/sub-%02d/%s/10%s_demographics.tsv' % (subject, source_type, subject)  # noqa: E501
+        return files.sourcedata_dir + '/sub-%02d/%s/10%02d_demographics.tsv' % (subject, source_type, subject)  # noqa: E501
 
 
 # create full path for data file input
