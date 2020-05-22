@@ -7,27 +7,25 @@ experimental blocks) will be dropped.
 Authors: José C. García Alanis <alanis.jcg@gmail.com>
 License: BSD (3-clause)
 """
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
-cmap = cm.get_cmap('inferno')  # noqa
-
 import numpy as np
 import pandas as pd
 
 from mne import Annotations, open_report
 from mne.io import read_raw_fif
 
-from scipy.stats import median_absolute_deviation as mad
-from sklearn.preprocessing import normalize
-
 # All parameters are defined in config.py
-from config import fname, parser, n_jobs, sample_rate
+from config import fname, parser, sample_rate, n_jobs, LoggingFormat
+from bads import find_bad_channels
+from viz import plot_z_scores
 
 # Handle command line arguments
 args = parser.parse_args()
 subject = args.subject
 
-print('Initialise artefact detection for subject %s' % subject)
+print(LoggingFormat.PURPLE +
+      LoggingFormat.BOLD +
+      'Initialise bad channel detection for subject %s' % subject +
+      LoggingFormat.END)
 
 ###############################################################################
 # 1) Import the output from previous processing step
@@ -60,104 +58,104 @@ raw.filter(l_freq=0.1, h_freq=40.,
            n_jobs=n_jobs)
 
 ###############################################################################
-# 2) Compute robust average reference
+# 2) Check if there are any flat EOG channels
+flat_eogs = find_bad_channels(raw, picks='eog', method='flat')['flat']
 
-iterations = 0
-noisy = []
-max_iter = 4
+# remove flat eog channels from data
+raw.drop_channels(flat_eogs)
 
-raw_copy = raw.copy()
-# eeg signal
+###############################################################################
+# 3) Find noisy channels and compute robust average reference
+sfreq = sample_rate
+channels = raw.copy().pick_types(eeg=True).ch_names
+
+# extract eeg signal
 eeg_signal = raw.get_data(picks='eeg')
-# get robust estimate of central tendency (i.e., the median)
-ref_signal = np.nanmedian(eeg_signal, axis=0)
 
+# reference signal to robust estimate of central tendency
+ref_signal = np.nanmedian(eeg_signal, axis=0)
 eeg_temp = eeg_signal - ref_signal
 
+i = 0
+noisy = []
 while True:
+
     # find bad channels by deviation (high variability in amplitude)
-    # mean absolute deviation (MAD) scores for each channel
-    mad_scores = \
-        [mad(eeg_temp[i, :], scale=1) for i in range(eeg_temp.shape[0])]
+    bad_dev = find_bad_channels(eeg_temp,
+                                channels=channels,
+                                method='deviation')['deviation']
 
-    # compute robust z-scores for each channel
-    robust_z_scores_dev = \
-        0.6745 * (mad_scores - np.nanmedian(mad_scores)) / mad(mad_scores,
-                                                               scale=1)
+    # find channels that don't well with other channels
+    bad_corr = find_bad_channels(eeg_temp,
+                                 channels=channels,
+                                 sfreq=sfreq,
+                                 r_threshold=0.3,
+                                 percent_threshold=0.5,
+                                 method='correlation')['correlation']
 
-    # channels identified by deviation criterion
-    bad_deviation = \
-        [raw_copy.ch_names[i]
-         for i in np.where(np.abs(robust_z_scores_dev) > 5.0)[0]]
+    # only keep unique values
+    bads = set(bad_dev) | set(bad_corr)
 
-    noisy.extend(bad_deviation)
-
-    if (iterations > 1 and
-            (not bad_deviation or set(bad_deviation) == set(noisy))
-            or
-            iterations > max_iter):
+    # break if no (more) bad channels found
+    if i > 0 and (len(bads) == 0 or bads == set(noisy)) or i > 4:
         break
 
-    if bad_deviation:
-        raw_copy = raw.copy()
-        raw_copy.info['bads'] = list(set(noisy))
-        raw_copy.interpolate_bads(mode='accurate')
+    # save identified channels as noisy
+    noisy.extend(bads)
 
+    # interpolate noisy channels
+    raw_copy = raw.copy()
+    raw_copy.info['bads'] = noisy
+    raw_copy.interpolate_bads(mode='accurate')
+
+    # redo with newly referenced "clean" signal
     eeg_signal = raw_copy.get_data(picks='eeg')
     ref_signal = np.nanmean(eeg_signal, axis=0)
     eeg_temp = eeg_signal - ref_signal
 
-    if bad_deviation:
-        print(bad_deviation)
+    print(noisy)
 
-    iterations = iterations + 1
+    i = i + 1
 
 ###############################################################################
-# 3) Find noisy channels
-
+# 4) Compute robust average reference for EEG data
 # remove robust reference
 eeg_signal = raw.get_data(picks='eeg')
+eeg_temp -= ref_signal
+
+# re-reference eeg-signal using the reference computed in
+# "clean" reference computed above
 eeg_temp = eeg_signal - ref_signal
 
-# mean absolute deviation (MAD) scores for each channel
-mad_scores = \
-    [mad(eeg_temp[i, :], scale=1) for i in range(eeg_temp.shape[0])]
+# bad by (un)correlation
+bad_corr = find_bad_channels(eeg_temp,
+                             channels=channels,
+                             sfreq=sfreq,
+                             r_threshold=0.3,
+                             percent_threshold=0.5,
+                             method='correlation')['correlation']
 
-# compute robust z-scores for each channel
-robust_z_scores_dev = \
-    0.6745 * (mad_scores - np.nanmedian(mad_scores)) / mad(mad_scores,
-                                                           scale=1)
-# plot results
-z_colors = \
-    normalize(np.abs(robust_z_scores_dev).reshape((1, robust_z_scores_dev.shape[0]))).ravel()  # noqa: E501
+# bad by deviation
+bad_dev = find_bad_channels(eeg_temp,
+                            channels=channels,
+                            method='deviation',
+                            return_z_scores=True)
 
-props = dict(boxstyle='round', facecolor='white', alpha=0.5)
-fig, ax = plt.subplots(figsize=(5, 15))
-for i in range(robust_z_scores_dev.shape[0]):
-    ax.axvline(x=5.0, ymin=-5.0, ymax=5.0,
-               color='crimson', linestyle='dotted', linewidth=.8)
-    ax.text(5.0, -2.0, 'crit. Z-score',  fontsize=14,
-            verticalalignment='center', horizontalalignment='center',
-            color='crimson', bbox=props)
-    ax.barh(i, np.abs(robust_z_scores_dev[i]), 0.9, color=cmap(z_colors[i]))
-    ax.text(np.abs(robust_z_scores_dev[i]) + 0.25, i, raw.info['ch_names'][i],
-            ha='center', va='center', fontsize=9)
-ax.set_xlim(0, int(robust_z_scores_dev.max()+2))
-plt.title('EEG channel deviation')
-plt.xlabel('Abs. Z-Score')
-plt.ylabel('Channels')
-plt.close(fig)
+z_scores = bad_dev['deviation_z_scores']
+bad_dev = bad_dev['deviation']
+
+# only keep unique values
+bad_channels = set(bad_dev) | set(bad_corr)
+
+# create plot showing channels z-scores
+fig = plot_z_scores(z_scores, channels=channels, bads=bad_channels, show=False)
 
 # interpolate channels identified by deviation criterion
-bad_channels = \
-    [raw.ch_names[i] for i in
-     np.where(np.abs(robust_z_scores_dev) > 5.0)[0]]
-raw.info['bads'] = bad_channels
+raw.info['bads'] = list(bad_channels)
 raw.interpolate_bads(mode='accurate')
 
 ###############################################################################
 # 3) Reference eeg data to average of all eeg channels
-
 raw.set_eeg_reference(ref_channels='average', projection=True)
 
 ###############################################################################
@@ -193,7 +191,8 @@ for sample in range(0, data.shape[1]):
         peak.append(abs(data[channel][sample]))
     if max(peak) >= 300e-6:
         times.append(float(sample))
-        annotated_channels.append(raw_copy.ch_names[picks[int(np.argmax(peak))]])  # noqa: E501
+        annotated_channels.append(raw_copy.ch_names[picks[int(np.argmax(
+            peak))]])
 # if artifact found create annotations for raw data
 if len(times) > 0:
     # get first time
@@ -240,7 +239,6 @@ plot_artefacts = raw.plot(scalings=dict(eeg=50e-6, eog=50e-6),
                           n_channels=len(raw.info['ch_names']),
                           title='Robust reference applied Sub-%s' % subject,
                           show=False)
-
 
 ###############################################################################
 # 5) Export data to .fif for further processing
