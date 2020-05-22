@@ -81,8 +81,7 @@ exclude = ['EXG4', 'EXG5', 'EXG6', 'EXG7', 'EXG8']
 
 # subjects to use for analysis
 subjects = [2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
-            19, 20, 23, 24, 27, 28, 29, 31, 32, 33, 34, 35,
-            36, 37, 38]
+            19, 20, 23, 24, 27, 28, 29, 31, 32, 33, 34, 35, 36, 37, 38]
 
 # relevant events in the paradigm
 event_ids = {'flanker_onset': 71,
