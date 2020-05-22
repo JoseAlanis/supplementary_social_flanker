@@ -129,7 +129,7 @@ for event in range(len(new_evs[:, 2])):
                     # incorrect incongruent
                     new_evs[event + 2, 2] = 14
 
-            # sace trial rt
+            # save trial rt
             trial_rt = (new_evs[event+2, 0] - new_evs[event+1, 0]) / sfreq
             rt.append(trial_rt)
         # append block variable identifying the ongoing condition
@@ -141,15 +141,15 @@ for event in range(len(new_evs[:, 2])):
             block.append(1)
         elif trial < 848:
             # subjects with cond 3 first (i.e., negative interaction)
-            if int(subject) in {2, 4, 6, 8, 10, 11, 13, 15, 17, 19, 21, 23, 28,
-                                30, 32, 34, 35, 36}:
+            if subject in {2, 4, 6, 8, 10, 11, 13, 15, 17, 19, 21, 23, 28,
+                           30, 32, 34, 35, 36}:
                 block.append(3)
             else:
                 block.append(2)
         elif trial < 1248:
             # subjects with cond 2 first (i.e., positive interaction)
-            if int(subject) in {2, 4, 6, 8, 10, 11, 13, 15, 17, 19, 21, 23, 28,
-                                30, 32, 34, 35, 36}:
+            if subject in {2, 4, 6, 8, 10, 11, 13, 15, 17, 19, 21, 23, 28,
+                           30, 32, 34, 35, 36}:
                 block.append(2)
             else:
                 block.append(3)
@@ -175,6 +175,13 @@ for event in range(len(new_evs[:, 2])):
         trial += 1
 
 ###############################################################################
+# check if subjects performed the negative condition first
+if subject in {2, 4, 6, 8, 10, 11, 13, 15, 17, 19, 21, 23, 28,
+               30, 32, 34, 35, 36}:
+    neg = True
+else:
+    neg = False
+
 # 4) Create data frame with epochs metadata
 metadata = {'trial': triallist,
             'condition': block,
@@ -183,7 +190,8 @@ metadata = {'trial': triallist,
             'target': target,
             'flanker': flanker,
             'block': block,
-            'subject': np.repeat(subject, len(triallist))}
+            'subject': np.repeat(subject, len(triallist)),
+            'negative_first': np.repeat(neg, len(triallist))}
 metadata = pd.DataFrame(metadata)
 
 # save metadata structure for further analysis
