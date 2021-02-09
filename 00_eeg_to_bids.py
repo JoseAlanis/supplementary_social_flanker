@@ -14,10 +14,10 @@ import pandas as pd
 from mne.io import read_raw_bdf
 from mne import find_events, Annotations, open_report
 
-from mne_bids import write_raw_bids, make_bids_basename
+from mne_bids import write_raw_bids, BIDSPath
 
 # All parameters are defined in config.py
-from config import fname, exclude, task_name, montage, event_ids, parser, \
+from config import fname, task_name, montage, parser, \
     LoggingFormat
 
 ###############################################################################
@@ -43,8 +43,7 @@ input_file = fname.source(source_type='eeg',
                           subject=subject)
 # 1) Import the data
 raw = read_raw_bdf(input_file,
-                   preload=False,
-                   exclude=exclude)
+                   preload=False)
 
 # sampling rate
 sfreq = raw.info['sfreq']
@@ -90,6 +89,7 @@ raw.info['subject_info'] = dict(id=subject,
 
 # frequency of power line
 raw.info['line_freq'] = 50.0
+raw.info['lowpass'] = raw.info['sfreq'] / 2
 
 ###############################################################################
 # 4) Create events info
@@ -100,22 +100,7 @@ events = find_events(raw,
                      min_duration=0.002)
 
 ###############################################################################
-# 5) Export to bids
-# file name compliant with bids
-bids_basename = make_bids_basename(
-    subject=str(subject).rjust(3, '0'),
-    task=task_name)
-
-# save in bids format
-write_raw_bids(raw,
-               bids_basename,
-               fname.data_dir,
-               event_id=event_ids,
-               events_data=events,
-               overwrite=True)
-
-###############################################################################
-# 6) Extract events from the status channel and save them as file annotations
+# 5) Extract events from the status channel and save them as file annotations
 # events to data frame
 events = pd.DataFrame(events,
                       columns=['onset', 'duration', 'description'])
@@ -133,6 +118,19 @@ annotations = Annotations(events['onset_in_s'],
                           orig_time=raw.info['meas_date'])
 # apply to raw data
 raw.set_annotations(annotations)
+
+###############################################################################
+# 6) Export to bids
+# file name compliant with bids
+bids_path = BIDSPath(
+    subject=str(subject).rjust(3, '0'),
+    task=task_name,
+    root=fname.data_dir)
+
+# save in bids format
+write_raw_bids(raw,
+               bids_path,
+               overwrite=True)
 
 ###############################################################################
 # 7) Plot the data for report

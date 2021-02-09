@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Utility functions for plotting.
+
 Authors: José C. García Alanis <alanis.jcg@gmail.com>
+
 License: BSD (3-clause)
 """
 import numpy as np

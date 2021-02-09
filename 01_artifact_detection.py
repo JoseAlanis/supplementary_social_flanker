@@ -10,6 +10,8 @@ License: BSD (3-clause)
 import numpy as np
 import pandas as pd
 
+import matplotlib.pyplot as plt
+
 from mne import Annotations, open_report
 from mne.io import read_raw_fif
 
@@ -34,6 +36,12 @@ input_file = fname.output(subject=subject,
                           file_type='raw.fif')
 raw = read_raw_fif(input_file, preload=True)
 
+# drop status channel
+raw.drop_channels('Status')
+
+###############################################################################
+# 2) Remove slow drifts and line noise
+
 # Setting up band-pass filter from 0.1 - 40 Hz
 #
 # FIR filter parameters
@@ -45,28 +53,40 @@ raw = read_raw_fif(input_file, preload=True)
 # - Lower transition bandwidth: 0.10 Hz (-6 dB cutoff frequency: 0.05 Hz)
 # - Upper passband edge: 40.00 Hz
 # - Upper transition bandwidth: 10.00 Hz (-6 dB cutoff frequency: 45.00 Hz)
-# - Filter length: 33 sec
-raw.filter(l_freq=0.1, h_freq=40.,
-           picks=['eeg', 'eog'],
-           filter_length='auto',
-           l_trans_bandwidth='auto',
-           h_trans_bandwidth='auto',
-           method='fir',
-           phase='zero',
-           fir_window='hamming',
-           fir_design='firwin',
-           n_jobs=n_jobs)
+# - Filter length: 8449 samples (33.004 sec)
+raw = raw.filter(l_freq=0.1, h_freq=40.,
+                 picks=['eeg', 'eog'],
+                 filter_length='auto',
+                 l_trans_bandwidth='auto',
+                 h_trans_bandwidth='auto',
+                 method='fir',
+                 phase='zero',
+                 fir_window='hamming',
+                 fir_design='firwin',
+                 n_jobs=n_jobs)
+
+# plot filtered data
+filt_plot = raw.plot(scalings=dict(eeg=50e-6, eog=50e-6),
+                     n_channels=len(raw.info['ch_names']),
+                     show=False)
+plt.close('all')
 
 ###############################################################################
-# 2) Check if there are any flat EOG channels
+# 3) Check if there are any flat EOG channels
 flat_eogs = find_bad_channels(raw, picks='eog', method='flat')['flat']
 
 # remove flat eog channels from data
 raw.drop_channels(flat_eogs)
 
 ###############################################################################
-# 3) Find noisy channels and compute robust average reference
-sfreq = sample_rate
+# 4) Plot power spectral density
+fig, ax = plt.subplots(figsize=(10, 5))
+raw.plot_psd(fmax=70, show=False, ax=ax)
+plt.close('all')
+
+###############################################################################
+# 5) Find noisy channels and compute robust average reference
+sfreq = raw.info['sfreq']
 channels = raw.copy().pick_types(eeg=True).ch_names
 
 # extract eeg signal
@@ -74,11 +94,12 @@ eeg_signal = raw.get_data(picks='eeg')
 
 # reference signal to robust estimate of central tendency
 ref_signal = np.nanmedian(eeg_signal, axis=0)
-eeg_temp = eeg_signal - ref_signal
 
 i = 0
 noisy = []
 while True:
+    # remove reference
+    eeg_temp = eeg_signal - ref_signal
 
     # find bad channels by deviation (high variability in amplitude)
     bad_dev = find_bad_channels(eeg_temp,
@@ -89,50 +110,49 @@ while True:
     bad_corr = find_bad_channels(eeg_temp,
                                  channels=channels,
                                  sfreq=sfreq,
-                                 r_threshold=0.3,
-                                 percent_threshold=0.5,
+                                 r_threshold=0.4,
+                                 percent_threshold=0.05,
+                                 time_step=1.0,
                                  method='correlation')['correlation']
 
     # only keep unique values
     bads = set(bad_dev) | set(bad_corr)
 
-    # break if no (more) bad channels found
-    if i > 0 and (len(bads) == 0 or bads == set(noisy)) or i > 4:
-        break
+    # save identified noisy channels
+    if bads:
+        noisy.extend(bads)
+        print('Found bad channels %s'
+              % (', '.join([str(chan) for chan in bads])))
 
-    # save identified channels as noisy
-    noisy.extend(bads)
+        # interpolate noisy channels
+        raw_copy = raw.copy()
+        raw_copy.info['bads'] = noisy
+        raw_copy.interpolate_bads(mode='accurate')
+        eeg_signal = raw_copy.get_data(picks='eeg')
 
-    # interpolate noisy channels
-    raw_copy = raw.copy()
-    raw_copy.info['bads'] = noisy
-    raw_copy.interpolate_bads(mode='accurate')
-
-    # redo with newly referenced "clean" signal
-    eeg_signal = raw_copy.get_data(picks='eeg')
+    # compute new reference (mean of signal with interpolated channels)
     ref_signal = np.nanmean(eeg_signal, axis=0)
-    eeg_temp = eeg_signal - ref_signal
 
-    print(noisy)
+    # break if no (more) bad channels found
+    if (i > 0 and len(bads) == 0) or i > 4:
+        print('Finishing after i == %s' % i)
+        break
 
     i = i + 1
 
 ###############################################################################
-# 4) Compute robust average reference for EEG data
+# 6) Compute robust average reference for EEG data
 # remove robust reference
 eeg_signal = raw.get_data(picks='eeg')
-eeg_temp -= ref_signal
-
-# re-reference eeg-signal using the reference computed in
-# "clean" reference computed above
 eeg_temp = eeg_signal - ref_signal
 
 # bad by (un)correlation
 bad_corr = find_bad_channels(eeg_temp,
                              channels=channels,
                              sfreq=sfreq,
-                             r_threshold=0.3,
-                             percent_threshold=0.5,
+                             r_threshold=0.4,
+                             percent_threshold=0.05,
+                             time_step=1.0,
                              method='correlation')['correlation']
 
 # bad by deviation
@@ -149,14 +169,16 @@ bad_channels = set(bad_dev) | set(bad_corr)
 
 # create plot showing channels z-scores
 fig = plot_z_scores(z_scores, channels=channels, bads=bad_channels, show=False)
+plt.close('all')
 
 # interpolate channels identified by deviation criterion
 raw.info['bads'] = list(bad_channels)
 raw.interpolate_bads(mode='accurate')
 
 ###############################################################################
-# 3) Reference eeg data to average of all eeg channels
+# 7) Reference eeg data to average of all eeg channels
 raw.set_eeg_reference(ref_channels='average', projection=True)
+
 
 ###############################################################################
 # 4) Find distorted segments in data
@@ -184,12 +206,12 @@ bad_chans = []
 # loop through samples
 for sample in range(0, data.shape[1]):
     if len(times) > 0:
-        if sample <= (times[-1] + int(1 * raw_copy.info['sfreq'])):
+        if sample <= (times[-1] + int(1 * sfreq)):
             continue
     peak = []
     for channel in picks:
         peak.append(abs(data[channel][sample]))
-    if max(peak) >= 300e-6:
+    if max(peak) >= 250e-6:
         times.append(float(sample))
         annotated_channels.append(raw_copy.ch_names[picks[int(np.argmax(
             peak))]])
@@ -203,7 +225,7 @@ if len(times) > 0:
     # save onsets
     onsets = np.asarray(times)
     # include one second before artifact onset
-    onsets = ((onsets / raw_copy.info['sfreq']) + first_time) - 1
+    onsets = ((onsets / sfreq) + first_time) - 1
     # durations and labels
     duration = np.repeat(2, len(onsets))
     description = np.repeat('Bad', len(onsets))
@@ -239,16 +261,16 @@ plot_artefacts = raw.plot(scalings=dict(eeg=50e-6, eog=50e-6),
                           n_channels=len(raw.info['ch_names']),
                           title='Robust reference applied Sub-%s' % subject,
                           show=False)
+plt.close('all')
 
 ###############################################################################
-# 5) Export data to .fif for further processing
+# 8) Export data to .fif for further processing
 # output path
 output_path = fname.output(processing_step='repair_bads',
                            subject=subject,
                            file_type='raw.fif')
 
-# sample down and save file
-raw.resample(sfreq=sample_rate)
+# save file
 raw.save(output_path, overwrite=True)
 
 ###############################################################################
@@ -260,12 +282,12 @@ bad_channels_identified = '<p>Channels_interpolated:.<br>'\
 with open_report(fname.report(subject=subject)[0]) as report:
     report.add_htmls_to_section(htmls=bad_channels_identified,
                                 captions='Bad channels',
-                                section='Artefact detection')
+                                section='Bad channel detection')
     report.add_figs_to_section(fig, 'Robust Z-Scores',
-                               section='Artefact detection',
+                               section='Bad channel detection',
                                replace=True)
     report.add_figs_to_section(plot_artefacts, 'Clean data',
-                               section='Artefact detection',
+                               section='Bad channel detection',
                                replace=True)
     report.save(fname.report(subject=subject)[1], overwrite=True,
                 open_browser=False)
