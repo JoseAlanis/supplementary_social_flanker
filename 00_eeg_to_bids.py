@@ -10,6 +10,7 @@ License: BSD (3-clause)
 import os.path as op
 
 import pandas as pd
+import matplotlib.pyplot as plt
 
 from mne.io import read_raw_bdf
 from mne import find_events, Annotations, open_report
@@ -138,6 +139,7 @@ raw_plot = raw.plot(scalings=dict(eeg=50e-6, eog=50e-6),
                     n_channels=len(raw.info['ch_names']),
                     show=True
                     )
+plt.close('all')
 
 ###############################################################################
 # 8) Export data to .fif for further processing

@@ -15,6 +15,8 @@ import platform
 
 import argparse
 
+import multiprocessing
+
 from utils import FileNames
 
 from mne.channels import make_standard_montage
@@ -55,7 +57,7 @@ if 'Jose' in node and 'n' in system:
 elif 'jose' in node and 'x' in system:
     # pc at home
     data_dir = '../data'
-    n_jobs = 8  # This station has 16 cores (we'll use 8).
+    n_jobs = 'cuda'  # Use NVIDIA CUDA GPU processing
 elif 'ma04' in node:
     data_dir = '../data'
     n_jobs = 2
@@ -65,7 +67,10 @@ else:
     n_jobs = 1
 
 # For BLAS to use the right amount of cores
-os.environ['OMP_NUM_THREADS'] = str(n_jobs)
+use_cores = multiprocessing.cpu_count()//2
+if use_cores < 2:
+    use_cores = 1
+os.environ['OMP_NUM_THREADS'] = str(use_cores)
 
 ###############################################################################
 # Relevant parameters for the analysis.

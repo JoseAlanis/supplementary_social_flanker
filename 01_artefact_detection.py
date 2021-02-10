@@ -16,7 +16,7 @@ from mne import Annotations, open_report
 from mne.io import read_raw_fif
 
 # All parameters are defined in config.py
-from config import fname, parser, sample_rate, n_jobs, LoggingFormat
+from config import fname, parser, n_jobs, LoggingFormat
 from bads import find_bad_channels
 from viz import plot_z_scores
 
@@ -110,7 +110,7 @@ while True:
     bad_corr = find_bad_channels(eeg_temp,
                                  channels=channels,
                                  sfreq=sfreq,
-                                 r_threshold=0.4,
+                                 r_threshold=0.45,
                                  percent_threshold=0.05,
                                  time_step=1.0,
                                  method='correlation')['correlation']
@@ -150,7 +150,7 @@ eeg_temp = eeg_signal - ref_signal
 bad_corr = find_bad_channels(eeg_temp,
                              channels=channels,
                              sfreq=sfreq,
-                             r_threshold=0.4,
+                             r_threshold=0.45,
                              percent_threshold=0.05,
                              time_step=1.0,
                              method='correlation')['correlation']
@@ -275,7 +275,7 @@ raw.save(output_path, overwrite=True)
 
 ###############################################################################
 # 6) Create HTML report
-bad_channels_identified = '<p>Channels_interpolated:.<br>'\
+bad_channels_identified = '<p>Channels_interpolated:<br>'\
                           '%s <p>' \
                           % (', '.join([str(chan) for chan in bad_channels]))
 

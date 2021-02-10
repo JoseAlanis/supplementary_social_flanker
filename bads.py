@@ -93,7 +93,7 @@ def find_bad_channels(inst, picks='eeg',
 
         # channels identified by deviation criterion
         bad_deviation = \
-            [channels[i] for i in np.where(np.abs(rz_scores) > 5.0)[0]]
+            [channels[i] for i in np.where(np.abs(rz_scores) >= 5.0)[0]]
 
         bad_channels.update(deviation=np.asarray(bad_deviation))
 
