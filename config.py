@@ -11,10 +11,11 @@ License: BSD (3-clause)
 """
 import os
 from os import path as op
-import getpass
-from socket import getfqdn
+import platform
 
 import argparse
+
+import multiprocessing
 
 from utils import FileNames
 
@@ -45,28 +46,31 @@ parser.add_argument('subject',
 
 # Determine which user is running the scripts on which machine. Set the path to
 # where the data is stored and determine how many CPUs to use for analysis.
-user = getpass.getuser()  # Username
-host = getfqdn()  # Hostname
+node = platform.node()  # machine
+system = platform.system()  # OS
 
 # You want to add your machine to this list
-if user == 'josealanis' and '.uni-marburg.de' in host:
+if 'Jose' in node and 'n' in system:
     # iMac at work
-    data_dir = '../ernsoc_data_bids'
-    n_jobs = 4  # iMac has 6 cores (we'll use 4).
-# elif user == 'josealanis' and host == 'josealanis-desktop':
-#     # pc at home
-#     data_dir = '../ernsoc_data_bids'
-#     n_jobs = 8  # My workstation has 16 cores (we'll use 8).
-elif user == 'philipplange' and '.uni-marburg.de' in host:
-    data_dir = '../ernsoc_data_bids'
-    n_jobs = 4   # philipp's office mac
+    data_dir = '../data'
+    n_jobs = 2  # This station has 4 cores (we'll use 2).
+elif 'jose' in node and 'x' in system:
+    # pc at home
+    data_dir = '../data'
+    n_jobs = 'cuda'  # Use NVIDIA CUDA GPU processing
+elif 'ma04' in node:
+    data_dir = '../data'
+    n_jobs = 2
 else:
     # Defaults
     data_dir = '../data'
     n_jobs = 1
 
 # For BLAS to use the right amount of cores
-os.environ['OMP_NUM_THREADS'] = str(n_jobs)
+use_cores = multiprocessing.cpu_count()//2
+if use_cores < 2:
+    use_cores = 1
+os.environ['OMP_NUM_THREADS'] = str(use_cores)
 
 ###############################################################################
 # Relevant parameters for the analysis.
@@ -80,8 +84,7 @@ montage = make_standard_montage(kind='standard_1020')
 exclude = ['EXG4', 'EXG5', 'EXG6', 'EXG7', 'EXG8']
 
 # subjects to use for analysis
-subjects = [2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
-            19, 20, 23, 24, 27, 28, 29, 31, 32, 33, 34, 35, 36, 37, 38]
+subjects = [2, 35, 36]
 
 # relevant events in the paradigm
 event_ids = {'flanker_onset': 71,

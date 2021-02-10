@@ -13,12 +13,16 @@ from mne.preprocessing import ICA
 
 # All parameters are defined in config.py
 from config import fname, parser, n_jobs
+# check if NVIDIA CUDA GPU processing should be used
+if n_jobs == 'cuda':
+    from mne.utils import set_config
+    set_config('MNE_USE_CUDA', 'true')
 
 # Handle command line arguments
 args = parser.parse_args()
 subject = args.subject
 
-print('Run ICA for subject %s' % subject)
+print('Fitting ICA for subject %s' % subject)
 
 ###############################################################################
 # 1) Import the output from previous processing step
@@ -34,7 +38,7 @@ raw_filt = raw.copy().filter(l_freq=1.0, h_freq=None, n_jobs=n_jobs)
 #  2) Set ICA parameters
 n_components = 20
 method = 'infomax'
-reject = dict(eeg=300e-6)
+reject = dict(eeg=250e-6)
 
 ###############################################################################
 # 3) Fit ICA
@@ -48,7 +52,7 @@ ica.fit(raw_filt,
 
 ###############################################################################
 # 4) Plot ICA components
-ica_fig = ica.plot_components(picks=range(0, 15), show=False)
+ica_fig = ica.plot_components(picks=range(0, 20), show=False)
 
 ###############################################################################
 # 5) Save ICA solution

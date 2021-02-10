@@ -46,7 +46,7 @@ ica = read_ica(input_file)
 
 ###############################################################################
 # 3) Find bad components via correlation with template ICA
-temp_subjs = [12]
+temp_subjs = [2]
 temp_raws = []
 temp_icas = []
 
@@ -63,7 +63,7 @@ for subj in temp_subjs:
 corrmap(icas=[temp_icas[0], ica],
         template=(0, 0), threshold=0.85, label='blink_up', plot=False)
 corrmap(icas=[temp_icas[0], ica],
-        template=(0, 3), threshold=0.85, label='blink_side', plot=False)
+        template=(0, 7), threshold=0.85, label='blink_side', plot=False)
 
 ###############################################################################
 # 4) Create summary plots to show signal correction on main experimental
@@ -94,7 +94,7 @@ for bad_comp in np.unique(bad_components):
 
     # show how the signal is affected by component rejection
     fig_evoked = ica.plot_overlay(target_evo, exclude=[bad_comp], show=False)
-    plt.close(fig_evoked)
+    plt.close('all')
 
     # create HTML report
     with open_report(fname.report(subject=subject)[0]) as report:

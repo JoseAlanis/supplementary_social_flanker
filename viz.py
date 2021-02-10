@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Utility functions for plotting.
+
 Authors: José C. García Alanis <alanis.jcg@gmail.com>
+
 License: BSD (3-clause)
 """
 import numpy as np
@@ -57,6 +59,7 @@ def plot_z_scores(z_scores, channels, bads=None, cmap='inferno', show=False):
     ax.spines['right'].set_visible(False)
     ax.spines['left'].set_bounds(0, y_lim)
 
-    plt.close(fig)
+    if not show:
+        plt.close(fig)
 
     return fig.show() if show else fig

@@ -14,7 +14,7 @@ License: BSD (3-clause)
 import pandas as pd
 import numpy as np
 
-from mne import events_from_annotations, Epochs, open_report
+from mne import events_from_annotations, Epochs
 from mne.io import read_raw_fif
 
 # All parameters are defined in config.py
@@ -91,7 +91,7 @@ for event in range(len(new_evs[:, 2])):
                 not in {7, 8, 9, 10}:
             # if no response followed, the trial is missed (i.e., there will be
             # no corresponding eeg segment for analysis)
-            print('response missed in trial %s' % event)
+            print('response missed in trial %s' % trial)
             # append nan for reaction dependent measures
             reaction.append(np.nan)
             missed.append(trial)
@@ -100,7 +100,7 @@ for event in range(len(new_evs[:, 2])):
             # if a response followed the flankers (before target onset)
             # the trial is too_soon (i.e., there will be
             # no corresponding eeg segment for analysis)
-            print('response to soon in trial %s' % event)
+            print('response to soon in trial %s' % trial)
             # append nan for reaction dependent measures
             reaction.append(np.nan)
             too_soon.append(trial)
@@ -218,7 +218,16 @@ react_events = new_evs[np.where((new_evs[:, 2] >= 11) & (new_evs[:, 2] <= 14))]
 metadata = metadata.dropna()
 
 # rejection threshold
-reject = dict(eeg=300e-6)
+reject = dict(eeg=250-6)
+
+# set decimation rate to achieve desired sampling freq
+decim = 1
+if raw.info['sfreq'] == 256.0:
+    decim = 2
+elif raw.info['sfreq'] == 512.0:
+    decim = 4
+elif raw.info['sfreq'] == 1024.0:
+    decim = 8
 
 reaction_epochs = Epochs(raw,
                          react_events,
@@ -230,7 +239,8 @@ reaction_epochs = Epochs(raw,
                          baseline=None,
                          preload=True,
                          reject_by_annotation=True,
-                         reject=reject)
+                         reject=reject,
+                         decim=decim)
 
 ###############################################################################
 # 7) Save epochs
@@ -238,6 +248,5 @@ reaction_epochs = Epochs(raw,
 reaction_output_path = fname.output(processing_step='reaction_epochs',
                                     subject=subject,
                                     file_type='epo.fif')
-# resample and save to disk
-reaction_epochs.resample(sfreq=100.)
+# save to disk
 reaction_epochs.save(reaction_output_path, overwrite=True)

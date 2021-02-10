@@ -82,7 +82,7 @@ def task_repair_bad_channels():
 
             # How the script needs to be called. Here we indicate it should
             # have one command line parameter: the name of the subject.
-            actions=['python 01_artifact_detection.py %s' % subject]
+            actions=['python 01_artefact_detection.py %s' % subject]
         )
 
 
@@ -101,7 +101,7 @@ def task_fit_ica():
 
             # If any of these files change, the script needs to be re-run. Make
             # sure that the script itself is part of this list!
-            file_dep=['01_artifact_detection.py'],
+            file_dep=['01_artefact_detection.py'],
 
             # The files produced by the script
             targets=[fname.output(processing_step='fit_ica',
@@ -114,7 +114,7 @@ def task_fit_ica():
         )
 
 
-def task_repair_artefacts():
+def task_repair_eeg_artefacts():
     """Step 04: Repair EEG artefacts caused by ocular movements."""
     # Run the script for each subject in a sub-task.
     for subject in subjects:
@@ -128,7 +128,7 @@ def task_repair_artefacts():
             # If any of these files change, the script needs to be re-run. Make
             # sure that the script itself is part of this list!
             file_dep=['00_eeg_to_bids.py',
-                      '01_artifact_detection.py',
+                      '01_artefact_detection.py',
                       '02_fit_ica.py'],
 
             # The files produced by the script
@@ -138,7 +138,7 @@ def task_repair_artefacts():
 
             # How the script needs to be called. Here we indicate it should
             # have one command line parameter: the name of the subject.
-            actions=['python 03_repair_eeg_artifacts.py %s' % subject]
+            actions=['python 03_repair_eeg_artefacts.py %s' % subject]
         )
 
 
@@ -148,7 +148,7 @@ def task_extract_epochs():
     for subject in subjects:
         yield dict(
             # This task should come after `fit_ica`
-            task_dep=['repair_artefacts'],
+            task_dep=['repair_eeg_artefacts'],
 
             # A name for the sub-task: set to the name of the subject
             name=subject,
@@ -156,9 +156,9 @@ def task_extract_epochs():
             # If any of these files change, the script needs to be re-run. Make
             # sure that the script itself is part of this list!
             file_dep=['00_eeg_to_bids.py',
-                      '01_artifact_detection.py',
+                      '01_artefact_detection.py',
                       '02_fit_ica.py',
-                      '03_repair_eeg_artifacts.py'],
+                      '03_repair_eeg_artefacts.py'],
 
             # The files produced by the script
             targets=[fname.output(processing_step='reaction_epochs',
