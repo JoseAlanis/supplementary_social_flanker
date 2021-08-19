@@ -2,7 +2,7 @@ numpy
 scipy
 matplotlib
 pandas
-sklearn
+scikit-learn
 doit>=0.30
 mne>=0.19
 mne-bids
