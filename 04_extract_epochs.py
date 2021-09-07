@@ -149,7 +149,7 @@ for event in range(len(new_evs[:, 2])):
         elif trial < 1248:
             # subjects with cond 3 first (i.e., negative interaction)
             if subject in {2, 4, 6, 8, 10, 11, 13, 15, 17, 19, 21,
-                           23, 27, 29, 31, 33, 37, 38}:  # 39 too
+                           23, 27, 29, 31, 33, 37, 38}:
                 block.append(3)
             else:
                 block.append(2)
@@ -175,7 +175,7 @@ for event in range(len(new_evs[:, 2])):
         trial += 1
 
 ###############################################################################
-# check if subjects performed the negative condition first
+# check if subjects performed the positive condition first
 if subject in {2, 4, 6, 8, 10, 11, 13, 15, 17, 19, 21,
                23, 27, 29, 31, 33, 37, 38}:
     neg = False
@@ -183,16 +183,27 @@ else:
     neg = True
 
 # 4) Create data frame with epochs metadata
-metadata = {'trial': triallist,
-            'condition': block,
-            'reaction': reaction,
-            'rt': rt,
-            'target': target,
-            'flanker': flanker,
-            'block': block,
-            'subject': np.repeat(subject, len(triallist)),
-            'negative_first': np.repeat(neg, len(triallist))}
-metadata = pd.DataFrame(metadata)
+try:
+    # try to build metadata-df
+    metadata = {'trial': triallist,
+                'condition': block,
+                'reaction': reaction,
+                'rt': rt,
+                'target': target,
+                'flanker': flanker,
+                'block': block,
+                'subject': np.repeat(subject, len(triallist)),
+                'negative_first': np.repeat(neg, len(triallist))}
+    metadata = pd.DataFrame(metadata)
+
+    # save metadata structure for further analysis
+    subj = str(subject).rjust(3, '0')
+    metadata_export = fname.dataframes + '/rt_data_sub-%s.tsv' % subj
+except ValueError:
+      # print which variable in metadata is of unequal size to others and breaks df creation
+        print("ValueError: unequal size of lists, can't create metadata dataframe")
+        for k in metadata:
+            print('length of list ' + k +  ': ' + str(len(metadata[k])))
 
 # save metadata structure for further analysis
 subj = str(subject).rjust(3, '0')
